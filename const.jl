@@ -59,17 +59,11 @@ function h_gr(E, Tgas)
         phi = G_dust*sqrt(T)/E
     end
 
-    #phi = IfElse.ifelse(E==0.0, 1e20, G_dust*sqrt(T)/E)
-
     if phi < 1e-6
         user_h_gr = 1.225e-13*user_dust_to_gas_ratio
     else
         phi = 1.225e-13*user_dust_to_gas_ratio/(1e0+(8.074e-6*phi^1.378e0)*(1e0+ch34*phi^ch35))
     end
-
-    #user_h_gr = IfElse.ifelse(phi < 1e-6, 1.225e-13*user_dust_to_gas_ratio,
-    #            1.225e-13*user_dust_to_gas_ratio/
-    #            (1e0+(8.074e-6*phi^1.378e0)*(1e0+ch34*phi^ch35)))
 
     return user_h_gr
 end
@@ -94,8 +88,6 @@ function user_xr_ion(E)
         p2 = log10(E/nhtot)
     end
 
-    #p2 = IfElse.ifelse(E/nhtot < 1e-4, -4.0, IfElse.ifelse(E/nhtot > 0.1, -1.0, log10(E/nhtot)))
-
     f4 = 1.06+4.08e-2*p2+6.51e-3*p2^2e0
     f5 = 1.90+0.678*p2+0.113*p2^2e0
     f6 = 0.990-2.74e-3*p2+1.13e-3*p2^2e0
@@ -111,7 +103,7 @@ function beta(O)
     return 5e-10*O/(5e-10*O+gamma_chx)
 end
 
-function H_nuclei(H, H2, Hk)   #this could probably just be a constant
+function H_nuclei(H, H2, Hk)
     return H + H2*2 + Hk
 end
 
