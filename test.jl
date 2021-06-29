@@ -1,6 +1,5 @@
 using Catalyst, DiffEqFlux, DifferentialEquations, Plots #for gpu: CUDA
 using Flux.Losses: mae
-#using Flux.Optimise: update!
 
 include("const.jl")
 include("network.jl")
@@ -13,7 +12,7 @@ u0[idx_E] = E
 u0[idx_Cj] = Ck
 u0[idx_O] = O
 
-tspan = (3e12, 3e16) # vielleicht von 0 starten?? und mehr steps??
+tspan = (3e12, 3e16)
 t = 3*10 .^(range(12, stop=16, length=100)) # steps evenly log-sapced
 t_end = tspan[2]
 
@@ -28,21 +27,21 @@ NN = Chain(x -> x,
           Dense(7, 5, gelu),
           Dense(5, 5, gelu),
           Dense(5, 5, gelu),
-          Dense(5, 7)) #|> gpu
+          Dense(5, 7))
 
-p, re = Flux.destructure(NN) # use this p as the initial condition!
-re_NN = re(p) # need to restruture for backprop!   re_NN(u, p, t) = re(p)(u)
+p, re = Flux.destructure(NN)
+re_NN = re(p)
 
 function dudt!(du, u, p, t) #scale the data
-    du .= re_NN(u) .* yscale / t_end     #yscale und t_end auch auf gpu setzen???
+    du .= re_NN(u) .* yscale / t_end
 end
 
-prob = ODEProblem(dudt!, u0, tspan) # NeuralODE(NN, tspan, Tsit5(), saveat=t)
+prob = ODEProblem(dudt!, u0, tspan)
 sense = BacksolveAdjoint(checkpointing=true; autojacvec=ZygoteVJP())
 
 function predict_n_ode()
-  global re_NN = re(p) # WHY
-  _prob = remake(prob, p=p, tspan=tspan) # WHY
+  global re_NN = re(p)
+  _prob = remake(prob, p=p, tspan=tspan)
   pred = Array(solve(_prob, ode_solver, u0=u0, p=p, saveat=t, atol=1.e-6, sensalg=sense))
   return pred
 end
@@ -53,24 +52,19 @@ function loss_n_ode()
   return loss
 end
 
-iter = 1
-n_plot = 10
+
 cb = function (;doplot=false) # callback function to observe training
-  global iter
-  #if iter % n_plot == 0
   pred = predict_n_ode()
   display(sum(abs2, ode_data .- pred)) # use mae function?
   # plot current prediction against data
   pl = scatter(t, ode_data[1, :], label="ODE solution")
   scatter!(pl, t, pred[1, :], label="prediction", xaxis=:log)
   display(plot(pl))
-  #end
-  #iter += 1
   return false
 end
 
 loss_n_ode()
-cb() # Display the ODE with the initial parameter values.
+cb()
 opt = ADAMW(0.005, (0.9, 0.999), 1.f-6)
 data = Iterators.repeated((), 100) #gpu?
 @time Flux.train!(loss_n_ode, Flux.params(u0, p), data, opt, cb=cb)
