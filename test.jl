@@ -55,7 +55,7 @@ end
 
 cb = function (p;doplot=false) # callback function to observe training
   pred = predict_n_ode(p)
-  display(sum(abs2, ode_data .- pred)) # use mae function?
+  display(sum(abs2, ode_data .- pred))
   # plot current prediction against data
   pl = scatter(t, ode_data[1, :], label="ODE solution")
   scatter!(pl, t, pred[1, :], label="prediction", xaxis=:log)
